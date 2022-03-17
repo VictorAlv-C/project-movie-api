@@ -12,7 +12,7 @@ const Movie = sequelize.define('movie', {
     type: DataTypes.STRING(100),
     allowNull: false
   },
-  decription: {
+  description: {
     type: DataTypes.STRING(150),
     allowNull: false
   },
@@ -21,7 +21,7 @@ const Movie = sequelize.define('movie', {
     allowNull: false
   },
   rating: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.DOUBLE,
     allowNull: false
   },
   image: {
