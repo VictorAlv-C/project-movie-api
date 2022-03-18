@@ -1,4 +1,4 @@
-exports.filterObj = (obj, ...properties) => {
+const filterObj = (obj, ...properties) => {
   const newObj = {};
 
   Object.keys(obj).forEach((key) => {
@@ -8,3 +8,5 @@ exports.filterObj = (obj, ...properties) => {
   });
   return newObj;
 };
+
+module.exports = { filterObj };

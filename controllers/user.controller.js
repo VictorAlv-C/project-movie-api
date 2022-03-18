@@ -1,12 +1,103 @@
+const bcrypt = require('bcryptjs');
+
 const { User } = require('../models/user.model');
 const { catchAsync } = require('../utils/catchAsync');
+const { AppError } = require('../utils/AppError');
+const { filterObj } = require('../utils/filterObj');
 
-exports.getAllUsers = catchAsync(async (req, res, next) => {});
+exports.getAllUsers = catchAsync(async (req, res, next) => {
+  const users = await User.findAll({
+    where: { status: 'active' },
+    attributes: { exclude: ['password'] }
+  });
 
-exports.getUserById = catchAsync(async (req, res, next) => {});
+  res.status(200).json({
+    status: 'success',
+    data: { users }
+  });
+});
 
-exports.createUser = catchAsync(async (req, res, next) => {});
+exports.getUserById = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const user = await User.findOne({
+    where: { id, status: 'active' },
+    attributes: { exclude: ['password'] }
+  });
 
-exports.updateUser = catchAsync(async (req, res, next) => {});
+  if (!user) {
+    return next(new AppError(400, 'Cant get the user with given Id'));
+  }
 
-exports.deleteUser = catchAsync(async (req, res, next) => {});
+  res.status(200).json({
+    status: 'success',
+    data: { user }
+  });
+});
+
+exports.createUser = catchAsync(async (req, res, next) => {
+  const { userName, email, password } = req.body;
+
+  if (
+    !userName ||
+    !email ||
+    !password ||
+    userName.length === 0 ||
+    email.length === 0 ||
+    password.length === 0
+  ) {
+    return next(new AppError(401, 'Some property is missing or is empty'));
+  }
+
+  const salt = await bcrypt.genSalt(12);
+
+  const encryptedPassword = await bcrypt.hash(password, salt);
+
+  const user = await User.create({
+    userName,
+    email,
+    password: encryptedPassword
+  });
+
+  user.password = undefined;
+
+  res.status(200).json({
+    status: 'success',
+    data: { user }
+  });
+});
+
+exports.updateUser = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const user = await User.findOne({
+    where: { id, status: 'active' },
+    attributes: { exclude: ['password'] }
+  });
+
+  if (!user) return next(new AppError(400, 'Catn update user with given Id'));
+
+  const userUpdate = filterObj(req.body, 'userName', 'email');
+
+  if (userUpdate.userName === '' || userUpdate.email === '') {
+    return next(new AppError(400, 'Some propertie is empty'));
+  }
+
+  await user.update({ ...userUpdate });
+
+  res.status(200).json({
+    status: 'success',
+    data: { user }
+  });
+});
+
+exports.deleteUser = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const user = await User.findOne({ where: { id, status: 'active' } });
+
+  if (!user) return next(new AppError(400, 'Cant delete user with given Id'));
+
+  await user.update({ status: 'deleted' });
+  res.status(200).json({
+    status: 'success',
+    message: 'Deleted Successfully'
+  });
+});

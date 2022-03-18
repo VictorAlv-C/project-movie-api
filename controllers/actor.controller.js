@@ -67,20 +67,12 @@ exports.updateActor = catchAsync(async (req, res, next) => {
 
   if (!actor) return next(new AppError(400, 'Catn update actor with given Id'));
 
-  const actorUpdate = filterObj(
-    actor,
-    'name',
-    'country',
-    'age',
-    'profilePic',
-    'movieId'
-  );
+  const actorUpdate = filterObj(req.body, 'name', 'country', 'age');
 
   if (
     actorUpdate.name === '' ||
     actorUpdate.country === '' ||
-    actorUpdate.age === '' ||
-    actorUpdate.profilePic === ''
+    actorUpdate.age === ''
   ) {
     return next(new AppError(400, 'Some propertie is empty'));
   }
