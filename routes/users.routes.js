@@ -5,14 +5,21 @@ const {
   getUserById,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  loginUser
 } = require('../controllers/user.controller');
+
+const { validateSession } = require('../middlewares/auth.middleware');
+
+route.post('/login', loginUser);
+
+route.post('/', createUser);
+
+route.use(validateSession);
 
 route.get('/', getAllUsers);
 
 route.get('/:id', getUserById);
-
-route.post('/', createUser);
 
 route.patch('/:id', updateUser);
 

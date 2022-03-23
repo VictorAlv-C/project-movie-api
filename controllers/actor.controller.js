@@ -1,11 +1,17 @@
+const { ref, uploadBytes } = require('firebase/storage');
+
 const { Actor } = require('../models/actor.model');
+const { Movie } = require('../models/movie.model');
+
 const { catchAsync } = require('../utils/catchAsync');
 const { AppError } = require('../utils/AppError');
 const { filterObj } = require('../utils/filterObj');
+const { storage } = require('../utils/fireBase');
 
 exports.getAllActors = catchAsync(async (req, res, next) => {
   const actors = await Actor.findAll({
-    where: { status: 'active' }
+    where: { status: 'active' },
+    include: [{ model: Movie }]
   });
 
   res.status(200).json({
@@ -17,7 +23,8 @@ exports.getAllActors = catchAsync(async (req, res, next) => {
 exports.getActorById = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const actor = await Actor.findOne({
-    where: { id, status: 'active' }
+    where: { id, status: 'active' },
+    include: [{ model: Movie }]
   });
 
   if (!actor) {
@@ -31,26 +38,30 @@ exports.getActorById = catchAsync(async (req, res, next) => {
 });
 
 exports.createActor = catchAsync(async (req, res, next) => {
-  const { name, country, age, profilePic } = req.body;
+  const { name, country, age } = req.body;
 
   if (
     !name ||
     !country ||
     !age ||
-    !profilePic ||
     name.length === 0 ||
     country.length === 0 ||
-    age.length === 0 ||
-    profilePic.length === 0
+    age.length === 0
   ) {
     return next(new AppError(401, 'Some property is missing or is empty'));
   }
+  const arrName = req.file.originalname.split('.');
+  const ext = arrName.pop();
+  const nameImg = arrName.join('-');
+
+  const imgRef = ref(storage, `imgs/${nameImg}-${Date.now()}.${ext}`);
+  const upload = await uploadBytes(imgRef, req.file.buffer);
 
   const actor = await Actor.create({
     name,
     country,
     age,
-    profilePic
+    profilePic: upload.metadata.fullPath
   });
 
   res.status(200).json({
