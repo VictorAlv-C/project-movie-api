@@ -2,6 +2,7 @@ const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
 
 const { Movie } = require('../models/movie.model');
 const { Actor } = require('../models/actor.model');
+const { ActorsInMovies } = require('../models/actorsInMovies');
 
 const { AppError } = require('../utils/AppError');
 const { catchAsync } = require('../utils/catchAsync');
@@ -14,6 +15,15 @@ exports.getAllMovies = catchAsync(async (req, res) => {
     include: [{ model: Actor }]
   });
 
+  const promisesMovies = movies.map(async (movie) => {
+    const imgRef = ref(storage, movie.image);
+    const imgDownloadImg = await getDownloadURL(imgRef);
+
+    movie.image = imgDownloadImg;
+  });
+
+  await Promise.all(promisesMovies);
+
   res.status(200).json({
     status: 'success',
     data: { movies }
@@ -21,15 +31,7 @@ exports.getAllMovies = catchAsync(async (req, res) => {
 });
 
 exports.getMovieById = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const movie = await Movie.findOne({
-    where: { id, status: 'active' },
-    include: [{ model: Actor }]
-  });
-
-  if (!movie) {
-    return next(new AppError(404, 'Cant get movie with given Id'));
-  }
+  const { movie } = req;
 
   res.status(200).json({
     status: 'success',
@@ -38,7 +40,7 @@ exports.getMovieById = catchAsync(async (req, res, next) => {
 });
 
 exports.createMovie = catchAsync(async (req, res, next) => {
-  const { title, description, duration, rating, genre } = req.body;
+  const { title, description, duration, rating, genre, actors } = req.body;
   if (
     !title ||
     !description ||
@@ -54,14 +56,8 @@ exports.createMovie = catchAsync(async (req, res, next) => {
     return next(new AppError(404, 'Some property is missing or empty'));
   }
 
-  const arrName = req.file.originalname.split('.');
-  const ext = arrName.pop();
-  const name = arrName.join('-');
-
-  const imgRef = ref(storage, `imgs/${name}-${Date.now()}.${ext}`);
+  const imgRef = ref(storage, `apiMovie/imgMovies/${req.file.customName}`);
   const upload = await uploadBytes(imgRef, req.file.buffer);
-
-  const url = await getDownloadURL(imgRef);
 
   const movie = await Movie.create({
     title,
@@ -72,6 +68,11 @@ exports.createMovie = catchAsync(async (req, res, next) => {
     genre
   });
 
+  actors.map(
+    async (actor) =>
+      await ActorsInMovies.create({ actorId: actor, movieId: movie.id })
+  );
+
   res.status(201).json({
     status: 'success',
     data: { movie }
@@ -79,17 +80,9 @@ exports.createMovie = catchAsync(async (req, res, next) => {
 });
 
 exports.updateMovie = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
+  const { movie } = req;
 
-  const movie = await Movie.findOne({
-    where: { id, status: 'active' }
-  });
-
-  if (!movie) {
-    return next(new AppError(404, 'Cant update movie with given ID'));
-  }
-
-  const updateMovie = filterObj(
+  const dataMovie = filterObj(
     req.body,
     'title',
     'description',
@@ -98,14 +91,14 @@ exports.updateMovie = catchAsync(async (req, res, next) => {
   );
 
   if (
-    updateMovie['title'] === '' ||
-    updateMovie['description'] === '' ||
-    updateMovie['duration'] === '' ||
-    updateMovie['score'] === ''
+    dataMovie['title'] === '' ||
+    dataMovie['description'] === '' ||
+    dataMovie['duration'] === '' ||
+    dataMovie['score'] === ''
   ) {
     return next(new AppError(400, 'Some propertie is empty'));
   }
-  await movie.update({ ...updateMovie });
+  await movie.update({ ...dataMovie });
 
   res.status(200).json({
     satus: 'success',
@@ -114,12 +107,7 @@ exports.updateMovie = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteMovie = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const movie = await Movie.findOne({
-    where: { id, status: 'active' }
-  });
-
-  if (!movie) return next(new AppError(404, 'Cant delete movie with given ID'));
+  const { movie } = req;
 
   await movie.update({ status: 'deleted' });
 

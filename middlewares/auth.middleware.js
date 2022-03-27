@@ -15,8 +15,7 @@ exports.validateSession = catchAsync(async (req, res, next) => {
     token = req.headers.authorization.split(' ')[1];
   }
 
-  if (!token)
-    return next(new AppError(400, 'Invalid Session - must cotain Bearer'));
+  if (!token) return next(new AppError(400, 'Invalid Session'));
 
   const verifyToken = jwt.verify(token, process.env.JWT_SECRET);
 
@@ -28,6 +27,13 @@ exports.validateSession = catchAsync(async (req, res, next) => {
   if (!user) return next(new AppError(400, 'Invalid Session'));
 
   req.currentUser = user;
+
+  next();
+});
+
+exports.onlyAdmin = catchAsync(async (req, res, next) => {
+  if (req.currentUser.role !== 'admin')
+    next(new AppError(403, 'Acces Denegated'));
 
   next();
 });

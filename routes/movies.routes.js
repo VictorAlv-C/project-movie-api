@@ -9,15 +9,23 @@ const {
 } = require('../controllers/movie.controller');
 
 const { upload } = require('../utils/multer');
+const {
+  validateSession,
+  onlyAdmin
+} = require('../middlewares/auth.middleware');
+const { getMovie } = require('../middlewares/movies.middleware');
+
+route.use(validateSession);
 
 route.get('/', getAllMovies);
 
-route.get('/:id', getMovieById);
+route.post('/', onlyAdmin, upload.single('img'), createMovie);
 
-route.post('/', upload.single('img'), createMovie);
-
-route.patch('/:id', updateMovie);
-
-route.delete('/:id', deleteMovie);
+route
+  .use('/:id', getMovie)
+  .route('/:id')
+  .get(getMovieById)
+  .patch(onlyAdmin, updateMovie)
+  .delete(onlyAdmin, deleteMovie);
 
 module.exports = { movieRoutes: route };

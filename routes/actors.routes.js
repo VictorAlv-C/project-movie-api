@@ -1,4 +1,5 @@
 const express = require('express');
+const { body } = require('express-validator');
 const {
   createActor,
   getAllActors,
@@ -9,16 +10,26 @@ const {
 
 const { upload } = require('../utils/multer');
 
+const {
+  validateSession,
+  onlyAdmin
+} = require('../middlewares/auth.middleware');
+
+const { getActor } = require('../middlewares/actors.middleware');
+
 const routes = express.Router();
+
+routes.use(validateSession);
 
 routes.get('/', getAllActors);
 
-routes.post('/', upload.single('profilePic'), createActor);
+routes.post('/', onlyAdmin, upload.single('profilePic'), createActor);
 
-routes.get('/:id', getActorById);
-
-routes.patch('/:id', updateActor);
-
-routes.delete('/:id', deleteActor);
+routes
+  .use('/:id', getActor)
+  .route('/:id')
+  .get(getActorById)
+  .patch(onlyAdmin, updateActor)
+  .delete(onlyAdmin, deleteActor);
 
 module.exports = { actorRoutes: routes };

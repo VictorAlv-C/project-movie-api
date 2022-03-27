@@ -1,4 +1,4 @@
-const { ref, uploadBytes } = require('firebase/storage');
+const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
 
 const { Actor } = require('../models/actor.model');
 const { Movie } = require('../models/movie.model');
@@ -14,6 +14,23 @@ exports.getAllActors = catchAsync(async (req, res, next) => {
     include: [{ model: Movie }]
   });
 
+  const promisesActors = actors.map(async (actor) => {
+    const imgRef = ref(storage, actor.profilePic);
+    const imgDownloadImg = await getDownloadURL(imgRef);
+
+    actor.profilePic = imgDownloadImg;
+
+    const promisesMovies = actor.movies.map(async (movie) => {
+      const movieRef = ref(storage, movie.image);
+      const urlDownloadMovie = await getDownloadURL(movieRef);
+
+      movie.image = urlDownloadMovie;
+    });
+    await Promise.all(promisesMovies);
+  });
+
+  await Promise.all(promisesActors);
+
   res.status(200).json({
     status: 'success',
     data: { actors }
@@ -21,15 +38,7 @@ exports.getAllActors = catchAsync(async (req, res, next) => {
 });
 
 exports.getActorById = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const actor = await Actor.findOne({
-    where: { id, status: 'active' },
-    include: [{ model: Movie }]
-  });
-
-  if (!actor) {
-    return next(new AppError(400, 'Cant get the actor with given Id'));
-  }
+  const { actor } = req;
 
   res.status(200).json({
     status: 'success',
@@ -50,11 +59,8 @@ exports.createActor = catchAsync(async (req, res, next) => {
   ) {
     return next(new AppError(401, 'Some property is missing or is empty'));
   }
-  const arrName = req.file.originalname.split('.');
-  const ext = arrName.pop();
-  const nameImg = arrName.join('-');
 
-  const imgRef = ref(storage, `imgs/${nameImg}-${Date.now()}.${ext}`);
+  const imgRef = ref(storage, `apiMovie/imgActors/${req.file.customName}`);
   const upload = await uploadBytes(imgRef, req.file.buffer);
 
   const actor = await Actor.create({
@@ -71,24 +77,19 @@ exports.createActor = catchAsync(async (req, res, next) => {
 });
 
 exports.updateActor = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const actor = await Actor.findOne({
-    where: { id, status: 'active' }
-  });
+  const { actor } = req;
 
-  if (!actor) return next(new AppError(400, 'Catn update actor with given Id'));
-
-  const actorUpdate = filterObj(req.body, 'name', 'country', 'age');
+  const dataActor = filterObj(req.body, 'name', 'country', 'age');
 
   if (
-    actorUpdate.name === '' ||
-    actorUpdate.country === '' ||
-    actorUpdate.age === ''
+    dataActor.name === '' ||
+    dataActor.country === '' ||
+    dataActor.age === ''
   ) {
     return next(new AppError(400, 'Some propertie is empty'));
   }
 
-  await actor.update({ ...actorUpdate });
+  await actor.update({ ...dataActor });
 
   res.status(200).json({
     status: 'success',
@@ -97,10 +98,7 @@ exports.updateActor = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteActor = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const actor = await Actor.findOne({ where: { id, status: 'active' } });
-
-  if (!actor) return next(new AppError(400, 'Cant delete actor with given Id'));
+  const { actor } = req;
 
   await actor.update({ status: 'deleted' });
   res.status(200).json({

@@ -9,7 +9,12 @@ const {
   loginUser
 } = require('../controllers/user.controller');
 
-const { validateSession } = require('../middlewares/auth.middleware');
+const {
+  validateSession,
+  onlyAdmin
+} = require('../middlewares/auth.middleware');
+
+const { getUser, isAccountOwner } = require('../middlewares/users.middleware');
 
 route.post('/login', loginUser);
 
@@ -17,12 +22,13 @@ route.post('/', createUser);
 
 route.use(validateSession);
 
-route.get('/', getAllUsers);
+route.get('/', onlyAdmin, getAllUsers);
 
-route.get('/:id', getUserById);
-
-route.patch('/:id', updateUser);
-
-route.delete('/:id', deleteUser);
+route
+  .use('/:id', getUser)
+  .route('/:id')
+  .get(getUserById)
+  .patch(isAccountOwner, updateUser)
+  .delete(isAccountOwner, deleteUser);
 
 module.exports = { userRoutes: route };

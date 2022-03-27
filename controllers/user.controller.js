@@ -20,16 +20,7 @@ exports.getAllUsers = catchAsync(async (req, res, next) => {
 });
 
 exports.getUserById = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const user = await User.findOne({
-    where: { id, status: 'active' },
-    attributes: { exclude: ['password'] }
-  });
-
-  if (!user) {
-    return next(new AppError(400, 'Cant get the user with given Id'));
-  }
-
+  const { user } = req;
   res.status(200).json({
     status: 'success',
     data: { user }
@@ -69,20 +60,14 @@ exports.createUser = catchAsync(async (req, res, next) => {
 });
 
 exports.updateUser = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const user = await User.findOne({
-    where: { id, status: 'active' },
-    attributes: { exclude: ['password'] }
-  });
+  const { user } = req;
 
-  if (!user) return next(new AppError(400, 'Catn update user with given Id'));
+  const dataUser = filterObj(req.body, 'userName', 'email');
 
-  const userUpdate = filterObj(req.body, 'userName', 'email');
-
-  if (userUpdate.userName === '' || userUpdate.email === '')
+  if (dataUser.userName === '' || dataUser.email === '')
     return next(new AppError(400, 'Some propertie is empty'));
 
-  await user.update({ ...userUpdate });
+  await user.update({ ...dataUser });
 
   res.status(200).json({
     status: 'success',
@@ -91,12 +76,10 @@ exports.updateUser = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteUser = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const user = await User.findOne({ where: { id, status: 'active' } });
-
-  if (!user) return next(new AppError(400, 'Cant delete user with given Id'));
+  const { user } = req;
 
   await user.update({ status: 'deleted' });
+
   res.status(200).json({
     status: 'success',
     message: 'Deleted Successfully'
