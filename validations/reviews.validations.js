@@ -19,6 +19,11 @@ const validationCreateReview = [
     .withMessage('Property rating must be number')
     .custom((value) => value > 0 && value <= 5)
     .withMessage('Property rating must be between 1 and 5'),
+  body('movieId')
+    .notEmpty()
+    .withMessage('Property movieId is empty')
+    .isNumeric()
+    .withMessage('Property movieId mut be an Id numeric from Movie'),
   validationResults
 ];
 

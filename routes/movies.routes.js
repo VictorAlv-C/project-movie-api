@@ -14,7 +14,8 @@ const {
   createReview,
   getAllReviews,
   updateReview,
-  deleteReview
+  deleteReview,
+  getAllReviewsFromMovie
 } = require('../controllers/review.controller');
 
 const { upload } = require('../utils/multer');
@@ -29,6 +30,16 @@ const route = express.Router();
 
 route.use(validateSession);
 
+//Routes Review
+route
+  .route('/reviews')
+  .get(getAllReviews)
+  .post(validationCreateReview, createReview);
+
+// route.route('/reviews/:id').post(updateReview).delete(deleteReview);
+
+route.get('/:id/reviews', getMovie, getAllReviewsFromMovie);
+
 //Routes Movie
 route.get('/', getAllMovies);
 
@@ -40,22 +51,11 @@ route.post(
   createMovie
 );
 
-route.patch('/reviews/:id', updateReview);
-
 route
   .use('/:id', getMovie)
   .route('/:id')
   .get(getMovieById)
   .patch(onlyAdmin, updateMovie)
   .delete(onlyAdmin, deleteMovie);
-
-//Routes Review
-
-route
-  .route('/:movieId/reviews')
-  .post(validationCreateReview, createReview)
-  .get(getAllReviews);
-
-route.route('/:movieId/reviews/:reviewId').patch(updateReview);
 
 module.exports = { movieRoutes: route };

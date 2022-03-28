@@ -2,6 +2,7 @@ const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
 
 const { Movie } = require('../models/movie.model');
 const { Actor } = require('../models/actor.model');
+const { Review } = require('../models/review.model');
 const { ActorsInMovies } = require('../models/actorsInMovies');
 
 const { AppError } = require('../utils/AppError');
@@ -12,17 +13,8 @@ const { storage } = require('../utils/fireBase');
 exports.getAllMovies = catchAsync(async (req, res) => {
   const movies = await Movie.findAll({
     where: { status: 'active' },
-    include: [{ model: Actor }]
+    include: [{ model: Actor }, { model: Review }]
   });
-
-  const promisesMovies = movies.map(async (movie) => {
-    const imgRef = ref(storage, movie.image);
-    const imgDownloadImg = await getDownloadURL(imgRef);
-
-    movie.image = imgDownloadImg;
-  });
-
-  await Promise.all(promisesMovies);
 
   res.status(200).json({
     status: 'success',
@@ -43,14 +35,16 @@ exports.createMovie = catchAsync(async (req, res, next) => {
   const { title, description, duration, rating, genre, actors } = req.body;
 
   const imgRef = ref(storage, `apiMovie/imgMovies/${req.file.customName}`);
-  const upload = await uploadBytes(imgRef, req.file.buffer);
+  await uploadBytes(imgRef, req.file.buffer);
+
+  const imgDownloadImg = await getDownloadURL(imgRef);
 
   const movie = await Movie.create({
     title,
     description,
     duration,
     rating,
-    image: upload.metadata.fullPath,
+    image: imgDownloadImg,
     genre
   });
 
@@ -68,13 +62,7 @@ exports.createMovie = catchAsync(async (req, res, next) => {
 exports.updateMovie = catchAsync(async (req, res, next) => {
   const { movie } = req;
 
-  const dataMovie = filterObj(
-    req.body,
-    'title',
-    'description',
-    'duration',
-    'genre'
-  );
+  const dataMovie = filterObj(req.body, 'title', 'description', 'duration', 'genre');
 
   if (
     dataMovie['title'] === '' ||

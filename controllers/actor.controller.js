@@ -14,23 +14,6 @@ exports.getAllActors = catchAsync(async (req, res, next) => {
     include: [{ model: Movie }]
   });
 
-  const promisesActors = actors.map(async (actor) => {
-    const imgRef = ref(storage, actor.profilePic);
-    const imgDownloadImg = await getDownloadURL(imgRef);
-
-    actor.profilePic = imgDownloadImg;
-
-    const promisesMovies = actor.movies.map(async (movie) => {
-      const movieRef = ref(storage, movie.image);
-      const urlDownloadMovie = await getDownloadURL(movieRef);
-
-      movie.image = urlDownloadMovie;
-    });
-    await Promise.all(promisesMovies);
-  });
-
-  await Promise.all(promisesActors);
-
   res.status(200).json({
     status: 'success',
     data: { actors }
@@ -50,13 +33,14 @@ exports.createActor = catchAsync(async (req, res, next) => {
   const { name, country, age } = req.body;
 
   const imgRef = ref(storage, `apiMovie/imgActors/${req.file.customName}`);
-  const upload = await uploadBytes(imgRef, req.file.buffer);
+  await uploadBytes(imgRef, req.file.buffer);
+  const imgDownloadImg = await getDownloadURL(imgRef);
 
   const actor = await Actor.create({
     name,
     country,
     age,
-    profilePic: upload.metadata.fullPath
+    profilePic: imgDownloadImg
   });
 
   res.status(200).json({
@@ -70,11 +54,7 @@ exports.updateActor = catchAsync(async (req, res, next) => {
 
   const dataActor = filterObj(req.body, 'name', 'country', 'age');
 
-  if (
-    dataActor.name === '' ||
-    dataActor.country === '' ||
-    dataActor.age === ''
-  ) {
+  if (dataActor.name === '' || dataActor.country === '' || dataActor.age === '') {
     return next(new AppError(400, 'Some property is empty'));
   }
 

@@ -7,7 +7,22 @@ const { catchAsync } = require('../utils/catchAsync');
 const { filterObj } = require('../utils/filterObj');
 
 exports.getAllReviews = catchAsync(async (req, res, next) => {
-  const { movieId } = req.params;
+  const reviews = await Review.findAll({
+    where: { status: 'active' },
+    include: [
+      { model: Movie },
+      { model: User, attributes: { exclude: ['password'] } }
+    ]
+  });
+
+  res.status(200).json({
+    status: 'success',
+    data: { reviews }
+  });
+});
+
+exports.getAllReviewsFromMovie = catchAsync(async (req, res, next) => {
+  const movieId = req.params.id;
   const Movie_Reviews = await Movie.findOne({
     where: { id: movieId, status: 'active' },
     include: [
@@ -22,20 +37,10 @@ exports.getAllReviews = catchAsync(async (req, res, next) => {
     status: 'success',
     data: { Movie_Reviews }
   });
-  // const reviews = await Review.findAll({
-  //   where: { status: 'active' },
-  //   include: [{ model: Movie }, { model: User }]
-  // });
-
-  // res.status(200).json({
-  //   status: 'success',
-  //   data: { reviews }
-  // });
 });
 
 exports.createReview = catchAsync(async (req, res, next) => {
-  const { movieId } = req.params;
-  const { title, comments, rating } = req.body;
+  const { title, comments, rating, movieId } = req.body;
 
   const review = await Review.create({
     title,
@@ -52,8 +57,8 @@ exports.createReview = catchAsync(async (req, res, next) => {
 });
 
 exports.updateReview = catchAsync(async (req, res, next) => {
-  const { reviewId } = req.params;
-  const data = await Review.findOne({ where: { id: reviewId, status: 'active' } });
+  const { id } = req.params;
+  const data = await Review.findOne({ where: { id, status: 'active' } });
 
   if (!data) return next(new AppError(400, 'Cant update review with given Id'));
 
