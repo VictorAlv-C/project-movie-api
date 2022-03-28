@@ -49,17 +49,6 @@ exports.getActorById = catchAsync(async (req, res, next) => {
 exports.createActor = catchAsync(async (req, res, next) => {
   const { name, country, age } = req.body;
 
-  if (
-    !name ||
-    !country ||
-    !age ||
-    name.length === 0 ||
-    country.length === 0 ||
-    age.length === 0
-  ) {
-    return next(new AppError(401, 'Some property is missing or is empty'));
-  }
-
   const imgRef = ref(storage, `apiMovie/imgActors/${req.file.customName}`);
   const upload = await uploadBytes(imgRef, req.file.buffer);
 
@@ -86,7 +75,7 @@ exports.updateActor = catchAsync(async (req, res, next) => {
     dataActor.country === '' ||
     dataActor.age === ''
   ) {
-    return next(new AppError(400, 'Some propertie is empty'));
+    return next(new AppError(400, 'Some property is empty'));
   }
 
   await actor.update({ ...dataActor });

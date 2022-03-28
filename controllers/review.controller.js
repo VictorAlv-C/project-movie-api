@@ -7,53 +7,41 @@ const { catchAsync } = require('../utils/catchAsync');
 const { filterObj } = require('../utils/filterObj');
 
 exports.getAllReviews = catchAsync(async (req, res, next) => {
-  const reviews = await Review.findAll({
-    where: { status: 'active' },
-    include: [{ model: User }]
+  const { movieId } = req.params;
+  const Movie_Reviews = await Movie.findOne({
+    where: { id: movieId, status: 'active' },
+    include: [
+      {
+        model: Review,
+        include: [{ model: User, attributes: { exclude: ['password', 'role'] } }]
+      }
+    ]
   });
 
   res.status(200).json({
     status: 'success',
-    data: { reviews }
+    data: { Movie_Reviews }
   });
-});
+  // const reviews = await Review.findAll({
+  //   where: { status: 'active' },
+  //   include: [{ model: Movie }, { model: User }]
+  // });
 
-exports.getReviewId = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const review = await Review.findOne({
-    where: { id, status: 'active' },
-    include: [{ model: User }]
-  });
-  if (!review) return next(new AppError(401, 'Cant get review with given Id'));
-
-  res.status(200).json({
-    status: 'success',
-    data: { review }
-  });
+  // res.status(200).json({
+  //   status: 'success',
+  //   data: { reviews }
+  // });
 });
 
 exports.createReview = catchAsync(async (req, res, next) => {
-  const { title, comments, rating, userId, movieId } = req.body;
-  if (
-    !title ||
-    !comments ||
-    !rating ||
-    !userId ||
-    !movieId ||
-    title.length === 0 ||
-    comments.length === 0 ||
-    rating.length === 0 ||
-    userId.length === 0 ||
-    movieId.length === 0
-  ) {
-    return next(new AppError(400, 'Some propertie is missing or empty'));
-  }
+  const { movieId } = req.params;
+  const { title, comments, rating } = req.body;
 
   const review = await Review.create({
     title,
     comments,
     rating,
-    userId,
+    userId: req.currentUser.id,
     movieId
   });
 
@@ -64,19 +52,19 @@ exports.createReview = catchAsync(async (req, res, next) => {
 });
 
 exports.updateReview = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const data = await Review.findOne({ where: { id, status: 'active' } });
+  const { reviewId } = req.params;
+  const data = await Review.findOne({ where: { id: reviewId, status: 'active' } });
 
   if (!data) return next(new AppError(400, 'Cant update review with given Id'));
 
   dataReview = filterObj(data, 'title', 'comments', 'rating');
 
   if (
-    dataReview['title'].length === 0 ||
-    dataReview['comments'].length === 0 ||
-    dataReview['rating'].length === 0
+    dataReview['title'] === '' ||
+    dataReview['comments'] === '' ||
+    dataReview['rating'] === ''
   ) {
-    return next(new AppError(401, 'Some propertie is emprty'));
+    return next(new AppError(401, 'Some property is empty'));
   }
 
   const review = await data.update({ ...dataReview });
@@ -91,8 +79,7 @@ exports.deleteReview = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const review = await Review.findOne({ where: { id, status: 'active' } });
 
-  if (!review)
-    return next(new AppError(401, 'Cant delete review with given Id'));
+  if (!review) return next(new AppError(401, 'Cant delete review with given Id'));
 
   await review.update({ status: 'deleted' });
 

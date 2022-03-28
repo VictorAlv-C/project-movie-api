@@ -1,5 +1,5 @@
 const express = require('express');
-const route = express.Router();
+
 const {
   getAllUsers,
   getUserById,
@@ -13,12 +13,15 @@ const {
   validateSession,
   onlyAdmin
 } = require('../middlewares/auth.middleware');
-
 const { getUser, isAccountOwner } = require('../middlewares/users.middleware');
+
+const { validationCreateUser } = require('../validations/users.validations');
+
+const route = express.Router();
 
 route.post('/login', loginUser);
 
-route.post('/', createUser);
+route.post('/', validationCreateUser, createUser);
 
 route.use(validateSession);
 

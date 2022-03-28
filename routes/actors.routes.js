@@ -1,5 +1,5 @@
 const express = require('express');
-const { body } = require('express-validator');
+
 const {
   createActor,
   getAllActors,
@@ -17,13 +17,21 @@ const {
 
 const { getActor } = require('../middlewares/actors.middleware');
 
+const { validationCreateActor } = require('../validations/actors.validations');
+
 const routes = express.Router();
 
 routes.use(validateSession);
 
 routes.get('/', getAllActors);
 
-routes.post('/', onlyAdmin, upload.single('profilePic'), createActor);
+routes.post(
+  '/',
+  onlyAdmin,
+  upload.single('profilePic'),
+  validationCreateActor,
+  createActor
+);
 
 routes
   .use('/:id', getActor)

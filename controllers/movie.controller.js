@@ -41,20 +41,6 @@ exports.getMovieById = catchAsync(async (req, res, next) => {
 
 exports.createMovie = catchAsync(async (req, res, next) => {
   const { title, description, duration, rating, genre, actors } = req.body;
-  if (
-    !title ||
-    !description ||
-    !duration ||
-    !rating ||
-    !genre ||
-    title.length === 0 ||
-    description.length === 0 ||
-    duration.length === 0 ||
-    rating.length === 0 ||
-    genre.length === 0
-  ) {
-    return next(new AppError(404, 'Some property is missing or empty'));
-  }
 
   const imgRef = ref(storage, `apiMovie/imgMovies/${req.file.customName}`);
   const upload = await uploadBytes(imgRef, req.file.buffer);

@@ -30,17 +30,6 @@ exports.getUserById = catchAsync(async (req, res, next) => {
 exports.createUser = catchAsync(async (req, res, next) => {
   const { userName, email, password } = req.body;
 
-  if (
-    !userName ||
-    !email ||
-    !password ||
-    userName.length === 0 ||
-    email.length === 0 ||
-    password.length === 0
-  ) {
-    return next(new AppError(401, 'Some property is missing or is empty'));
-  }
-
   const salt = await bcrypt.genSalt(12);
 
   const encryptedPassword = await bcrypt.hash(password, salt);
